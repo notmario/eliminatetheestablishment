@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200&display=swap');
+* {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+/* center canvas in body */
+body {
+  margin: 0 auto;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #1f1f1f;
+}
+canvas {
+  max-width: 100vw;
+  max-height: 100vh;
+  aspect-ratio: 16/9;
+  background-color: black;
+}
+img {
+  display: none;
+}
