@@ -19,9 +19,11 @@ let diffstring = "normal";
 let getSave = () => {
   let saveString = localStorage.getItem("ata-save");
   if (saveString) {
-    save =JSON.parse( atob(saveString));
+    save = JSON.parse( atob(saveString));
   }
 }
+let mouseX = 0;
+let mouseY = 0;
 getSave();
 
 let doSave = () => {
@@ -31,6 +33,7 @@ let doSave = () => {
     map: map,
     hard: hard,
     gambler: gambler,
+    motheaTax: motheaTax,
     diffstring: diffstring,
   }
   localStorage.setItem("ata-save", btoa(JSON.stringify(save)));
@@ -43,6 +46,7 @@ let selupcard = 0;
 
 let hard = false;
 let gambler = false;
+let motheaTax = false;
 
 let energy = 3;
 let health = 69;
@@ -77,12 +81,44 @@ function shuffle(array) {
   return array;
 }
 
+let nametoemoji = {
+  "poison": "🦠",
+  "block": "🛡️",
+  "strength": "💪",
+  "speed": "⏱️",
+  "weak": "😩",
+  "stun": "⚡",
+  "reshank": "⚔️",
+  "superledge": "🎢",
+  "regooperate": "🧪",
+  "dynamite": "🧨",
+  "bleed": "🩸",
+  "dizzy": "💫",
+  "bonus draw": "🎴",
+}
+
+let statusdescs = {
+  "poison": "Lose 🦠{0} health every turn\nReduces by 1 every turn",
+  "block": "Blocks 🛡️{0} incoming damage",
+  "strength": "Attacks deal 🗡️{0} more damage",
+  "speed": "Accelerate does 🗡️{0} more damage",
+  "weak": "Take 50% more damage",
+  "stun": "Next ⚡{0} card{0s} are stunned\nThey are unusable",
+  "reshank": "Draw 🎴{0} card{0s} when you use a Shank",
+  "superledge": "Gain 🎴{0} Shank{0s} every turn",
+  "regooperate": "Inflict 🦠{0} poison when you use a shank",
+  "dynamite": "Reduces by 1 every turn\nTake 💥40 damage when this hits 0",
+  "bleed": "Lose 🩸{0} health every turn",
+  "dizzy": "Lose 🌟{0} energy next turn",
+  "bonus draw": "Draw 🎴{0} more card{0s} every turn"
+}
+
 let cards = [
   {
     name: "Punch",
     cost: 1,
     costUpgraded: 1,
-    description: "Deal {0} dmg",
+    description: "Deal 🗡️{0} dmg",
     action: ["attack"],
     val: [7],
     valUpgraded: [10],
@@ -92,7 +128,7 @@ let cards = [
     name: "Block",
     cost: 1,
     costUpgraded: 1,
-    description: "Block {0} dmg",
+    description: "Block 🛡️{0} dmg",
     action: ["block"],
     val: [4],
     valUpgraded: [6],
@@ -102,17 +138,17 @@ let cards = [
     name: "Bop",
     cost: 1,
     costUpgraded: 1,
-    description: "Deal {0} dmg",
+    description: "Deal 🗡️{0} dmg",
     action: ["attack"],
-    val: [3],
-    valUpgraded: [5],
+    val: [4],
+    valUpgraded: [6],
     useSound: new Audio("mus/dmg.ogg")
   },
   {
     name: "Bash",
     cost: 2,
     costUpgraded: 2,
-    description: "Deal {0} dmg\nInflict {1} weak",
+    description: "Deal 🗡️{0} dmg\nInflict 😩{1} weak",
     action: ["attack","weak"],
     val: [7,2],
     valUpgraded: [8,3],
@@ -122,7 +158,7 @@ let cards = [
     name: "Bish Bash",
     cost: 3,
     costUpgraded: 3,
-    description: "Deal {0} dmg\nInflict {1} weak",
+    description: "Deal 🗡️{0} dmg\nInflict 😩{1} weak",
     action: ["attack","weak"],
     val: [15,4],
     valUpgraded: [23,4],
@@ -132,7 +168,7 @@ let cards = [
     name: "Iron Wave",
     cost: 1,
     costUpgraded: 1,
-    description: "Deal {0} dmg\nBlock {1} dmg",
+    description: "Deal 🗡️{0} dmg\nBlock 🛡️{1} dmg",
     action: ["attack","block"],
     val: [4,3],
     valUpgraded: [6,4],
@@ -142,7 +178,7 @@ let cards = [
     name: "Grappling Hook",
     cost: 2,
     costUpgraded: 2,
-    description: "Use enemy's action\nStun {1} card{1s}\nDestroy this",
+    description: "Use enemy's action\nStun ⚡{1} card{1s}\nDestroy this",
     action: ["grapple","stun"],
     val: [0,1],
     valUpgraded: [0,2],
@@ -153,7 +189,7 @@ let cards = [
     name: "Goop",
     cost: 1,
     costUpgraded: 1,
-    description: "Inflict {0} poison",
+    description: "Inflict 🦠{0} poison",
     action: ["poison"],
     val: [3],
     valUpgraded: [4],
@@ -163,7 +199,7 @@ let cards = [
     name: "Super Goop",
     cost: 2,
     costUpgraded: 2,
-    description: "Inflict {0} poison",
+    description: "Inflict 🦠{0} poison",
     action: ["poison"],
     val: [5],
     valUpgraded: [7],
@@ -173,7 +209,7 @@ let cards = [
     name: "Rage",
     cost: 0,
     costUpgraded: 0,
-    description: "Gain {0} energy",
+    description: "Gain 🌟{0} energy",
     action: ["energy"],
     val: [1],
     valUpgraded: [2],
@@ -183,7 +219,7 @@ let cards = [
     name: "Meditate",
     cost: 2,
     costUpgraded: 2,
-    description: "Heal {0} hp\nBlock {1} dmg",
+    description: "Heal ❤️{0} hp\nBlock 🛡️{1} dmg",
     action: ["heal","block"],
     val: [4,4],
     valUpgraded: [6,6],
@@ -193,7 +229,7 @@ let cards = [
     name: "Gun",
     cost: 3,
     costUpgraded: 3,
-    description: "Deal {0} dmg",
+    description: "Deal 🗡️{0} dmg",
     action: ["attack"],
     val: [999],
     valUpgraded: [999999],
@@ -203,7 +239,7 @@ let cards = [
     name: "Pole Vault",
     cost: 1,
     costUpgraded: 1,
-    description: "Deal {0} dmg\nDraw {1} card{1s}",
+    description: "Deal 🗡️{0} dmg\nDraw 🎴{1} card{1s}",
     action: ["attack","draw"],
     val: [5,1],
     valUpgraded: [8,2],
@@ -213,7 +249,7 @@ let cards = [
     name: "Morb",
     cost: 1,
     costUpgraded: 1,
-    description: "Drain {0} hp",
+    description: "Drain ❤️{0} hp",
     action: ["drain"],
     val: [4],
     valUpgraded: [6],
@@ -223,7 +259,7 @@ let cards = [
     name: "Ledge",
     cost: 1,
     costUpgraded: 1,
-    description: "Gain {1} {0}{1s}",
+    description: "Gain 🎴{1} {0}{1s}",
     action: ["addCardToHand","null"],
     val: ["Shank",2],
     valUpgraded: ["Shank+",2],
@@ -233,7 +269,7 @@ let cards = [
     name: "Shank",
     cost: 0,
     costUpgraded: 0,
-    description: "Deal {0} dmg\nDestroy this",
+    description: "Deal 🗡️{0} dmg\nDestroy this",
     action: ["attack","shankshit"],
     val: [4,0],
     valUpgraded: [6,0],
@@ -244,7 +280,7 @@ let cards = [
     name: "Sacrifice",
     cost: 0,
     costUpgraded: 0,
-    description: "Draw {0} card{0s}\nGain {1} energy\nLose {2} hp\nDestroy this",
+    description: "Draw 🎴{0} card{0s}\nGain 🌟{1} energy\nLose ❤️{2} hp\nDestroy this",
     action: ["draw","energy","losehp"],
     val: [3,3,3],
     valUpgraded: [6,6,6],
@@ -255,7 +291,7 @@ let cards = [
     name: "Sword Hit",
     cost: 1,
     costUpgraded: 1,
-    description: "Do {0} dmg",
+    description: "Do 🗡️{0} dmg",
     action: ["attack"],
     val: [9],
     valUpgraded: [12],
@@ -265,17 +301,17 @@ let cards = [
     name: "Healing Potion",
     cost: 1,
     costUpgraded: 1,
-    description: "Heal {0} hp",
+    description: "Heal ❤️{0} hp",
     action: ["heal"],
     val: [5],
-    valUpgraded: [5],
+    valUpgraded: [7],
     useSound: new Audio("mus/goop.wav")
   },
   {
     name: "Toxic Slash",
     cost: 1,
     costUpgraded: 1,
-    description: "Deal {0} dmg\nInflict {1} poison",
+    description: "Deal 🗡️{0} dmg\nInflict 🦠{1} poison",
     action: ["attack","poison"],
     val: [4,2],
     valUpgraded: [5,2],
@@ -285,7 +321,7 @@ let cards = [
     name: "Regooperate",
     cost: 1,
     costUpgraded: 1,
-    description: "Shanks inflict {0}\npoison on use\nDestroy this",
+    description: "Shanks inflict 🦠{0}\npoison on use\nDestroy this",
     action: ["regooperate"],
     val: [1],
     valUpgraded: [2],
@@ -296,7 +332,7 @@ let cards = [
     name: "Superledge",
     cost: 1,
     costUpgraded: 1,
-    description: "Gain {0} Shank{0s}\nevery turn\nDestroy this",
+    description: "Gain 🎴{0} Shank{0s}\nevery turn\nDestroy this",
     action: ["superledge"],
     val: [1],
     valUpgraded: [2],
@@ -307,7 +343,7 @@ let cards = [
     name: "Light Slash",
     cost: 0,
     costUpgraded: 0,
-    description: "Do {0} dmg\nDraw {1} card",
+    description: "Do 🗡️{0} dmg\nDraw 🎴{1} card",
     action: ["attack","draw"],
     val: [3,1],
     valUpgraded: [6,1],
@@ -317,7 +353,7 @@ let cards = [
     name: "Mental Gymnastics",
     cost: 0,
     costUpgraded: 0,
-    description: "Block {0} dmg\nDestroy this",
+    description: "Block 🛡️{0} dmg\nDestroy this",
     action: ["block"],
     val: [7],
     valUpgraded: [11],
@@ -328,7 +364,7 @@ let cards = [
     name: "Backflip",
     cost: 1,
     costUpgraded: 1,
-    description: "Block {0} dmg\nDraw {1} card{1s}",
+    description: "Block 🛡️{0} dmg\nDraw 🎴{1} card{1s}",
     action: ["block","draw"],
     val: [4,2],
     valUpgraded: [7,2],
@@ -338,7 +374,7 @@ let cards = [
     name: "Double Punch",
     cost: 1,
     costUpgraded: 1,
-    description: "Deal {0} dmg, then\nDeal {1} dmg",
+    description: "Deal 🗡️{0} dmg, then\ndeal 🗡️{1} more",
     action: ["attack","attack"],
     val: [4,5],
     valUpgraded: [5,6],
@@ -348,7 +384,7 @@ let cards = [
     name: "Ultima Shank",
     cost: 2,
     costUpgraded: 2,
-    description: "Discard your hand\nConvert it into {0}s",
+    description: "Discard your hand\nConvert it into 🎴{0}s",
     action: ["converthand"],
     val: ["Shank"],
     valUpgraded: ["Shank+"],
@@ -369,7 +405,7 @@ let cards = [
     name: "Loud Yelling",
     cost: 1,
     costUpgraded: 0,
-    description: "Gain {0} Strength",
+    description: "Gain 💪{0} Strength",
     action: ["strength"],
     val: [2],
     valUpgraded: [3],
@@ -379,7 +415,7 @@ let cards = [
     name: "Perfect Punch",
     cost: 2,
     costUpgraded: 1,
-    description: "Deal {0} dmg for\neach card that has\nPunch in the name\n(does {perfect} dmg)",
+    description: "Deal 🗡️{0} dmg for\neach card that has\nPunch in the name\n(does 🗡️{perfect} dmg)",
     action: ["perfectpunch"],
     val: [3],
     valUpgraded: [3],
@@ -389,7 +425,7 @@ let cards = [
     name: "Spin Slash",
     cost: 1,
     costUpgraded: 1,
-    description: "Gain {0} Strength\nDeal {1} dmg\nBlock {2} dmg",
+    description: "Gain 💪{0} Strength\nDeal 🗡️{1} dmg\nBlock 🛡️{2} dmg",
     action: ["strength","attack","block"],
     val: [1,1,1],
     valUpgraded: [1,2,2],
@@ -399,7 +435,7 @@ let cards = [
     name: "Gambler's Glove",
     cost: 1,
     costUpgraded: 1,
-    description: "Block {0} dmg\nGet {1} random card{1s}\nDestroy this",
+    description: "Block 🛡️{0} dmg\nGet 🎴{1} random card{1s}\nDestroy this",
     action: ["block","gamble"],
     val: [2,1],
     valUpgraded: [3,2],
@@ -410,7 +446,7 @@ let cards = [
     name: "Apparatus",
     cost: 2,
     costUpgraded: 2,
-    description: "{0}x to poison\nDestroy this",
+    description: "🦠{0}x to poison\nDestroy this",
     action: ["poisonmult"],
     val: [2],
     valUpgraded: [3],
@@ -421,7 +457,7 @@ let cards = [
     name: "Dropkick",
     cost: 1,
     costUpgraded: 1,
-    description: "Do {0} dmg, if enemy\nis Weak, draw {1} card{1s}\nand gain {2} energy",
+    description: "Do 🗡️{0} dmg, if enemy\nis 😩Weak, draw 🎴{1} card{1s}\nand gain 🌟{2} energy",
     action: ["attack","dropkickdraw","dropkickenergy"],
     val: [7,1,1],
     valUpgraded: [11,1,1],
@@ -431,7 +467,7 @@ let cards = [
     name: "Intimidate",
     cost: 1,
     costUpgraded: 0,
-    description: "Inflict {0} weak\nDestroy this",
+    description: "Inflict 😩{0} weak\nDestroy this",
     action: ["weak"],
     val: [3],
     valUpgraded: [3],
@@ -452,7 +488,7 @@ let cards = [
     name: "Violent Coughing",
     cost: 1,
     costUpgraded: 1,
-    description: "Inflict {0} poison\nLose {1} hp",
+    description: "Inflict 🦠{0} poison\nLose ❤️{1} hp",
     action: ["poison","losehp"],
     val: [4,3],
     valUpgraded: [6,3],
@@ -462,7 +498,7 @@ let cards = [
     name: "Dynamite",
     cost: 2,
     costUpgraded: 2,
-    description: "In {0} turns,\ndo 40 dmg\n(Doesn't stack!)\nDestroy this",
+    description: "In 🧨{0} turns,\ndo 💥40 dmg\n(Doesn't stack!)\nDestroy this",
     action: ["dynamite"],
     val: [4],
     valUpgraded: [3],
@@ -473,7 +509,7 @@ let cards = [
     name: "Pickaxe",
     cost: 1,
     costUpgraded: 1,
-    description: "Do {0} dmg",
+    description: "Do 🗡️{0} dmg",
     action: ["attack"],
     val: [1],
     valUpgraded: [2],
@@ -484,10 +520,10 @@ let cards = [
     name: "Cursed Apparatus",
     cost: 1,
     costUpgraded: 1,
-    description: "{0}x to poison\nGain {1} poison",
+    description: "🦠{0}x to poison\nGain 🦠{1} poison",
     action: ["poisonmult","selfpoison"],
-    val: [1.5,4],
-    valUpgraded: [2.5,4],
+    val: [2,4],
+    valUpgraded: [3,4],
     useSound: new Audio("mus/dmg.ogg"),
     exhaust: true
   },
@@ -495,7 +531,7 @@ let cards = [
     name: "Sell Air",
     cost: 1,
     costUpgraded: 1,
-    description: "Gain {0} gold",
+    description: "Gain 🪙{0} gold",
     action: ["gaingold"],
     val: [3],
     valUpgraded: [6],
@@ -505,18 +541,170 @@ let cards = [
     name: "Buy Air",
     cost: 0,
     costUpgraded: 0,
-    description: "Spend {0} gold to\ninflict {1} poison\nand stun {2} card{2s}",
+    description: "Spend 🪙{0} gold to\ninflict 🦠{1} poison\nand stun ⚡{2} card{2s}",
     action: ["buyair","null","null"],
     val: [6,5,2],
     valUpgraded: [6,6,3],
     useSound: new Audio("mus/grapple.ogg"),
   },
+  {
+    name: "Accelerate",
+    cost: 0,
+    costUpgraded: 0,
+    description: "Do 🗡️{accelerate} dmg\nThis does +⏱️{0} dmg",
+    action: ["accelerate"],
+    val: [2],
+    valUpgraded: [3],
+    useSound: new Audio("mus/grapple.ogg"),
+  },
+  {
+    name: "Shotgun",
+    cost: 1,
+    costUpgraded: 1,
+    description: "Do 🗡️{1} dmg 5 times",
+    action: ["attack","attack","attack","attack"],
+    val: [1,1,1,1,1],
+    valUpgraded: [2,2,2,2,2],
+    useSound: new Audio("mus/dmg.ogg"),
+  },
+  {
+    name: "Slicy Dagger",
+    cost: 1,
+    costUpgraded: 1,
+    description: "Do 🗡️{0} dmg\nInflict 🩸{1} bleed",
+    action: ["attack","bleed"],
+    val: [1,1],
+    valUpgraded: [2,2],
+    useSound: new Audio("mus/dmg.ogg"),
+  },
+  {
+    name: "Smoke Bomb",
+    cost: 1,
+    costUpgraded: 1,
+    description: "Block 🛡️{0} dmg",
+    action: ["block"],
+    val: [5],
+    valUpgraded: [7],
+    useSound: new Audio("mus/shield.wav"),
+  },
+  {
+    name: "Swim",
+    cost: 0,
+    costUpgraded: -1,
+    description: "No effect",
+    action: ["null"],
+    val: [0],
+    valUpgraded: [0],
+    useSound: new Audio("mus/grapple.ogg"),
+  },
+  {
+    name: "Chainsaw",
+    cost: 2,
+    costUpgraded: 1,
+    description: "Do 🗡️{0} dmg\nInflict 🩸{1} bleed",
+    action: ["attack","bleed"],
+    val: [5,2],
+    valUpgraded: [7,2],
+    useSound: new Audio("mus/dmg.ogg"),
+  },
+  {
+    name: "Squid Games ‼️",
+    cost: 0,
+    costUpgraded: 0,
+    description: "Draw 🎴{0} card{0s}\nand gain 🌟{1} energy\nDestroy this",
+    action: ["draw","energy"],
+    val: [1,1],
+    valUpgraded: [2,1],
+    useSound: new Audio("mus/hey.ogg"),
+    exhaust: true
+  },
+  {
+    name: "Mothea Tax",
+    cost: 0,
+    costUpgraded: 0,
+    description: "Permanently steal the\nenemy's card\nDestroy this",
+    action: ["motheatax"],
+    val: [1],
+    valUpgraded: [2],
+    useSound: new Audio("mus/hey.ogg"),
+    exhaust: true
+  },
+  {
+    name: "Blind Punch",
+    cost: 1,
+    costUpgraded: 1,
+    description: "Do 🗡️{0} dmg\nLose 🌟{1} energy\nnext turn",
+    action: ["attack","selfdizzy"],
+    val: [11,1],
+    valUpgraded: [17,1],
+    useSound: new Audio("mus/dmg.ogg"),
+  },
+  {
+    name: "Tornado",
+    cost: 1,
+    costUpgraded: 1,
+    description: "Do 🗡️{0} dmg\nEnemy loses 🌟{1}\nenergy next turn",
+    action: ["attack","dizzy"],
+    val: [4,1],
+    valUpgraded: [7,1],
+    useSound: new Audio("mus/dmg.ogg"),
+  },
+  {
+    name: "Bumper",
+    cost: 1,
+    costUpgraded: 1,
+    description: "Do 🗡️{0} dmg\nBlock 🛡️{1} dmg",
+    action: ["attack","block"],
+    val: [2,2],
+    valUpgraded: [3,3],
+    useSound: new Audio("mus/shield.wav"),
+  },
+  {
+    name: "Zanyball",
+    cost: 2,
+    costUpgraded: 2,
+    description: "Do 🗡️{0} dmg",
+    action: ["attack"],
+    val: [9],
+    valUpgraded: [12],
+    useSound: new Audio("mus/dmg.ogg"),
+  },
+  {
+    name: "Hole In One",
+    cost: 1,
+    costUpgraded: 1,
+    description: "Do 🗡️{0} dmg\nStun all but ⚡1 card",
+    action: ["attack","holeinone"],
+    val: [4,1],
+    valUpgraded: [7,1],
+    useSound: new Audio("mus/dmg.ogg"),
+  },
+  {
+    name: "Fiscal Policy",
+    cost: 1,
+    costUpgraded: 0,
+    description: "Draw 🎴{0} more card{0s}\nevery turn, lose 🌟{1}\nenergy next turn",
+    action: ["bonusdraw","selfdizzy"],
+    val: [1,1],
+    valUpgraded: [1,1],
+    useSound: new Audio("mus/grapple.ogg"),
+  },
+  {
+    name: "Uninstall",
+    cost: 1,
+    costUpgraded: 0,
+    description: "Destroy the rightmost\ncard in your hand\npermanently",
+    action: ["destroy"],
+    val: [1,1],
+    valUpgraded: [1,1],
+    useSound: new Audio("mus/hey.ogg"),
+  }
 ]
 
 let allEnemies = [
   {
     name: "Gublin",
-    health: 35,
+    health: 45,
     moves: ["Bop","Block"],
     rarity: "normal",
   },
@@ -534,7 +722,7 @@ let allEnemies = [
   },
   {
     name: "Slimer",
-    health: 45,
+    health: 50,
     moves: ["Goop"],
     rarity: "normal",
   },
@@ -546,9 +734,9 @@ let allEnemies = [
   },
   {
     name: "Skelly Ton",
-    health: 100,
+    health: 65,
     moves: ["Grappling Hook","Block"],
-    rarity: "elite",
+    rarity: "normal",
   },
   {
     name: "Jones",
@@ -568,6 +756,30 @@ let allEnemies = [
     moves: ["Sell Air","Sell Air","Buy Air"],
     rarity: "boss",
   },
+  {
+    name: "Car",
+    health: 60,
+    moves: ["Accelerate"],
+    rarity: "normal",
+  },
+  {
+    name: "Bandit",
+    health: 90,
+    moves: ["Shotgun","Slicy Dagger","Smoke Bomb"],
+    rarity: "elite",
+  },
+  {
+    name: "Swordfish",
+    health: 65,
+    moves: ["Swim","Chainsaw"],
+    rarity: "normal",
+  },
+  {
+    name: "Golfer",
+    health: 65,
+    moves: ["Bumper","Tornado","Zanyball","Hole In One"],
+    rarity: "normal",
+  },
 ]
 
 let arrowsHeld = {
@@ -575,9 +787,10 @@ let arrowsHeld = {
   right: false,
   up: false,
   down: false,
+  q: false,
 }
 
-let drawCard = (x,y,name,cost,stunned)=>{
+let drawCard = (x,y,name,cost,stunned,owner)=>{
   let upgraded = false;
   if (name=="+" || name=="") return;
   if (name.indexOf("+") !== -1) {
@@ -598,13 +811,23 @@ let drawCard = (x,y,name,cost,stunned)=>{
   ctx.textAlign = "center";
   ctx.fillText(name, x+150/2, y+40, 140);
   ctx.font = "15px Arial";
+  let acc = 0;
+  if (owner == "self") {
+    if (playerStatuses.map(s=>s[0]).indexOf("speed") !== -1)
+    acc = playerStatuses.find(s=>s[0] == "speed")[1];
+  }
+  else {
+    if (targetStatuses.map(s=>s[0]).indexOf("speed") !== -1)
+    acc = targetStatuses.find(s=>s[0] == "speed")[1];
+  }
   for (line in card.description.split("\n")) {
     let lineText = card.description.split("\n")[line];
     for (val in vals) {
       lineText = lineText
         .replace("{"+val+"}",vals[val])
         .replace("{"+val+"s}",vals[val] === 1 ? "" : "s")
-        .replace("{perfect}",realDeck.filter(x=>x.indexOf("Punch") !== -1).length*vals[val]);
+        .replace("{perfect}",realDeck.filter(x=>x.indexOf("Punch") !== -1).length*vals[val])
+        .replace("{accelerate}",acc+1);
     }
     ctx.fillText(lineText, x+150/2, y+70+line*15, 140);
   }
@@ -1005,6 +1228,86 @@ let useCard = (fighter, name, preventRecursion) => {
           };
         }
         break;
+      case "accelerate":
+        console.log("accelerate for "+vals[action]);
+        let acc = 0;
+        if (fighter == "self") {
+          if (playerStatuses.map(s=>s[0]).indexOf("speed") !== -1)
+          acc = playerStatuses.find(s=>s[0] == "speed")[1];
+        }
+        else {
+          if (targetStatuses.map(s=>s[0]).indexOf("speed") !== -1)
+          acc = targetStatuses.find(s=>s[0] == "speed")[1];
+        }
+        takeDamage(fighter === "self" ? "target" : "self", acc+1);
+        addStatus(fighter,"speed",vals[action]);
+        break;
+      case "bleed":
+        console.log("bleed for "+vals[action]);
+        addStatus(fighter === "self" ? "target" : "self","bleed",vals[action]);
+        break;
+      case "motheatax":
+        console.log(`mothea tax!`);
+        if (fighter == "self") {
+          hand.push(enemy.moves[turn%enemy.moves.length]);
+          realDeck.push(enemy.moves[turn%enemy.moves.length]);
+        } else {
+          // just default to grappling hook lmao
+          console.log("grappling hook mechanic");
+          // use card on top of deck
+          if (deck.length > 0) {
+            console.log("deck card");
+            useCard("target",deck[0],preventRecursion);
+          } else {
+            // use card on top of discard
+            console.log("dis card");
+            useCard("target",discard[0],preventRecursion);
+          }
+        }
+        break;
+      case "dizzy":
+        console.log("dizzy for "+vals[action]);
+        addStatus(fighter === "self" ? "target" : "self","dizzy",vals[action]);
+        break;
+      case "selfdizzy":
+        console.log("self dizzy for "+vals[action]);
+        addStatus(fighter,"dizzy",vals[action]);
+        break;
+      case "bonusdraw":
+        console.log("bonusdraw for "+vals[action]);
+        addStatus(fighter,"bonus draw",vals[action]);
+        break;
+      case "holeinone":
+        console.log("hole in one!");
+        if (fighter == "target") {
+          // get total amount of cards in deck and discard
+          let total = deck.length + discard.length;
+          if (total == 1) {
+            // what the fuck
+          } else if (total <= 4) {
+            // what the hell. only stun less than total
+            addStatus(fighter === "self" ? "target" : "self","stun",total-1);
+          } else {
+            // stun 4
+            addStatus(fighter === "self" ? "target" : "self","stun",4);
+          }
+        } else {
+          // note: hole in one is useless for the player, as the enemy has one card lmao
+        }
+        break;
+      case "destroy":
+        console.log("destroying rightmost card");
+        if (fighter == "self") {
+          // get rightmost card
+          let rightmost = hand.length-1;
+          let q = realDeck.indexOf(hand[rightmost]);
+          // remove it
+          hand.splice(rightmost,1);
+          realDeck.splice(q,1);
+        } else {
+          // WHAT THE FUCK
+        }
+        break;
     }
   }
 }
@@ -1017,8 +1320,8 @@ realDeck.push("Punch");
 realDeck.push("Block");
 realDeck.push("Block");
 realDeck.push("Block");
-realDeck.push("Block");
 realDeck.push("Morb");
+realDeck.push("Uninstall");
 
 let droppableCards = [
   "Bash",
@@ -1047,7 +1350,13 @@ let droppableCards = [
   "All In",
   "Violent Coughing",
   "Dynamite",
-  "Cursed Apparatus"
+  "Cursed Apparatus",
+  "Accelerate",
+  "Shotgun",
+  "Chainsaw",
+  "Squid Games ‼️",
+  "Fiscal Policy",
+  "Uninstall",
 ]
 
 let shop = [];
@@ -1086,22 +1395,29 @@ const update = ()=>{
   if (gameState === "menu") {
     ctx.font = "50px Arial";
     ctx.fillStyle = "white";
-    ctx.fillText("Annihilate the Attic", canvas.width/2 - ctx.measureText("Annihilate the Attic").width/2, canvas.height/2 - 5);
-    ctx.font = "30px Arial";
-    ctx.fillText("Space to start", canvas.width/2 - ctx.measureText("Space to start").width/2, canvas.height/2 + 35);
-    ctx.fillText("H to start on Hard", canvas.width/2 - ctx.measureText("H to start on Hard").width/2, canvas.height/2 + 65);
-    ctx.fillText("G to start on Gambler", canvas.width/2 - ctx.measureText("G to start on Gambler").width/2, canvas.height/2 + 115);
-    ctx.fillText("M to start on True Morber", canvas.width/2 - ctx.measureText("M to start on True Morber").width/2, canvas.height/2 + 165);
-    ctx.font = "20px Arial";
-    ctx.fillText("Enemy cards upgraded, starting Morb is a Block", canvas.width/2 - ctx.measureText("Enemy cards upgraded, starting Morb is a Block").width/2, canvas.height/2 + 85);
-    ctx.fillText("Start with 5 Gambler's Gloves, all cards are Gambler's Gloves", canvas.width/2 - ctx.measureText("Start with 5 Gambler's Gloves, all cards are Gambler's Gloves").width/2, canvas.height/2 + 135);
-    ctx.fillText("Enemy cards upgraded, starting Morb is a Block, starting Punches are Morbs", canvas.width/2 - ctx.measureText("Enemy cards upgraded, starting Punches are Bops, starting Morb is a Block").width/2, canvas.height/2 + 185);
+    ctx.fillText("Eliminate the Establishment", canvas.width/2 - ctx.measureText("Eliminate the Establishment").width/2, canvas.height/2 - 5);
     if (Object.keys(save).length > 0) {
-      ctx.font = "30px Arial";
-      ctx.fillText("S to load game", 16, 46);
+      ctx.font = "40px Arial";
+      ctx.fillText("Space to load game", canvas.width/2 - ctx.measureText("Space to load game").width/2, canvas.height/2 + 35);
       ctx.font = "20px Arial";
-      ctx.fillText("Floor " + (27 - save.map.length) + " " + save.diffstring, 16, 66);
-
+      ctx.fillText("Floor " + (27 - save.map.length) + " " + save.diffstring, canvas.width/2 - ctx.measureText("Floor " + (27 - save.map.length) + " " + save.diffstring).width/2, canvas.height/2 + 55);
+      ctx.font = "30px Arial";
+      ctx.fillText("Q to delete save", canvas.width/2 - ctx.measureText("Q to delete save").width/2, canvas.height/2 + 85);
+      ctx.font = "20px Arial";
+      ctx.fillText("If you really want to", canvas.width/2 - ctx.measureText("If you really want to").width/2, canvas.height/2 + 105);
+    } else {
+      ctx.font = "40px Arial";
+      ctx.fillText("Space to start", canvas.width/2 - ctx.measureText("Space to start").width/2, canvas.height/2 + 35);
+      ctx.font = "30px Arial";
+      ctx.fillText("H to start on Hard", canvas.width/2 - ctx.measureText("H to start on Hard").width/2, canvas.height/2 + 65);
+      ctx.fillText("G to start on Gambler", canvas.width/2 - ctx.measureText("G to start on Gambler").width/2, canvas.height/2 + 115);
+      ctx.fillText("M to start on True Morber", canvas.width/2 - ctx.measureText("M to start on True Morber").width/2, canvas.height/2 + 165);
+      ctx.fillText("T to start on Tax Agent", canvas.width/2 - ctx.measureText("T to start on Tax Agent").width/2, canvas.height/2 + 215);
+      ctx.font = "20px Arial";
+      ctx.fillText("Enemy cards upgraded, starting Morb is a Block", canvas.width/2 - ctx.measureText("Enemy cards upgraded, starting Morb is a Block").width/2, canvas.height/2 + 85);
+      ctx.fillText("Start with 5 Gambler's Gloves, all cards are Gambler's Gloves", canvas.width/2 - ctx.measureText("Start with 5 Gambler's Gloves, all cards are Gambler's Gloves").width/2, canvas.height/2 + 135);
+      ctx.fillText("Enemy cards upgraded, starting Morb is a Block, starting Punches are Morbs", canvas.width/2 - ctx.measureText("Enemy cards upgraded, starting Punches are Bops, starting Morb is a Block").width/2, canvas.height/2 + 185);
+      ctx.fillText("Starting deck halved, don't get cards after combat, start with a Mothea Tax", canvas.width/2 - ctx.measureText("Starting deck halved, don't get cards after combat, start with a Mothea Tax").width/2, canvas.height/2 + 235);
     }
   } else if (gameState === "map") {
     ctx.font = "50px Arial";
@@ -1115,7 +1431,7 @@ const update = ()=>{
     ctx.fillText("You are here! (space to travel)", 5, canvas.height/2 - 35);
     ctx.fillText("v", 35, canvas.height/2 - 5);
     for (card in realDeck) {
-      drawCard(25+card*160 - deckScroll, canvas.height - 205, realDeck[card], true, false);
+      drawCard(25+card*160 - deckScroll, canvas.height - 205, realDeck[card], true, false, "self");
     }
     ctx.font = "30px Arial";
     ctx.fillStyle = "white";
@@ -1266,26 +1582,49 @@ const update = ()=>{
 
     // superledge
     let superledge = 0;
+    let bonusdraw = 0;
     for (let i = 0; i < playerStatuses.length; i++) {
       if (playerStatuses[i][0] === "superledge") {
         superledge = playerStatuses[i][1];
         continue;
       }
+      if (playerStatuses[i][0] === "bonus draw") {
+        bonusdraw = playerStatuses[i][1];
+        continue;
+      }
+    }
+    let i = 0;
+    if (bonusdraw > 0) {
+      // add 1 shank for each
+      for (i = i; i < bonusdraw; i++) {
+        gameDrawCard(500+i*100);
+      } 
     }
     if (superledge > 0) {
       // add 1 shank for each
-      for (let i = 0; i < superledge; i++) {
+      for (i = i; i < bonusdraw+superledge; i++) {
         setTimeout(function(){
           if (hand.length < 10) {
             hand.push("Shank");
           } else {
             discard.push("Shank");
           }
-        },500+i*250)
+        },500+i*100)
       } 
     }
     
     energy = 3;
+    // get amount of dizzy
+    let dizzy = 0;
+    for (let i = 0; i < playerStatuses.length; i++) {
+      if (playerStatuses[i][0] === "dizzy") {
+        dizzy = playerStatuses[i][1];
+        playerStatuses.splice(i,1);
+        continue;
+      }
+    }
+    energy -= dizzy;
+    if (energy < 0) energy = 0;
   }
   if (gameState === "combatPlayerTurn") {
     if (timeInPhase == 0) {
@@ -1296,6 +1635,13 @@ const update = ()=>{
           new Audio("./mus/goop.wav").play();
           playerStatuses[i][1]--;
           if (playerStatuses[i][1] <= 0) playerStatuses.splice(i, 1);
+          break;
+        }
+      }
+      for (let i = 0; i < playerStatuses.length; i++) {
+        if (playerStatuses[i][0] === "bleed") {
+          health -= playerStatuses[i][1];
+          new Audio("./mus/dmg.wav").play();
           break;
         }
       }
@@ -1327,10 +1673,18 @@ const update = ()=>{
       }
     }
     for (card in hand) {
-      drawCard(canvas.width/2 + (card - hand.length / 2) * 160, canvas.height - 205, hand[card], true, stun > card);
-      let keyToPlay = (card-0)+1;
-      if (keyToPlay == 10) keyToPlay = "0";
-      ctx.fillText("Play ("+keyToPlay+")", canvas.width/2 + (card - hand.length / 2) * 160 + 80 - ctx.measureText("Play ("+keyToPlay+")").width/2, canvas.height - 215);
+      // check if stunned or cannot afford
+      usable = true;
+      if (stun > card) usable = false;
+      if (energy < getCard(hand[card]).cost) usable = false;
+      if (!usable) ctx.globalAlpha = 0.5;
+      drawCard(canvas.width/2 + (card - hand.length / 2) * 160, canvas.height - 205, hand[card], true, stun > card, "self");
+      ctx.globalAlpha = 1;
+      if (usable) {
+        let keyToPlay = (card-0)+1;
+        if (keyToPlay == 10) keyToPlay = "0";
+        ctx.fillText("Play ("+keyToPlay+")", canvas.width/2 + (card - hand.length / 2) * 160 + 80 - ctx.measureText("Play ("+keyToPlay+")").width/2, canvas.height - 215);
+      }
     }
     ctx.setTransform(1,0,0,1,0,0);
     ctx.fillStyle = "#00ff00";
@@ -1339,18 +1693,18 @@ const update = ()=>{
     ctx.fillStyle = "#ff0000";
     let hpString = "HP: "+health+"/"+69;
     ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85);
-    hpString = playerStatuses.map(status => status[0] + ": " + status[1]).join(", ");
+    hpString = playerStatuses.map(status => nametoemoji[status[0]] + "" + status[1]).join(" ");
     ctx.fillStyle = "white";
     ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85+250+40);
     ctx.fillStyle = "orange";
     hpString = 'Gold: '+gold;
-    if (enemy.name === "Busyness Man" && realDeck.indexOf("Grappling Hook") != -1) ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85-20);
+    if (enemy.name === "Busyness Man" && (realDeck.indexOf("Grappling Hook") != -1 || realDeck.indexOf("Mothea Tax") != -1)) ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85-20);
     // draw orange circle top right of player
     ctx.beginPath();
-    ctx.arc(canvas.width / 5 + 75, canvas.height / 3 - 95, 15, 0, 2 * Math.PI);
+    ctx.arc(canvas.width / 5 + 75, canvas.height / 3 - 100, 20, 0, 2 * Math.PI);
     ctx.fill();
     ctx.fillStyle = "white";
-    ctx.font = "25px Arial";
+    ctx.font = "40px Arial";
     ctx.fillText(energy, canvas.width / 5 + 75 - ctx.measureText(energy).width/2, canvas.height / 3 - 85);
     hpString = "HP: "+enemy.health+"/"+enemy.maxhp;
     ctx.fillStyle = "#ff0000";
@@ -1361,16 +1715,16 @@ const update = ()=>{
       hpString = 'Gold: '+enemy.gold;
       ctx.fillText(hpString, 3 * canvas.width / 4 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85-20);
     }
-    hpString = targetStatuses.map(status => status[0] + ": " + status[1]).join(", ");
+    hpString = targetStatuses.map(status => nametoemoji[status[0]] + "" + status[1]).join(" ");
     ctx.fillStyle = "white";
     ctx.fillText(hpString, 3 * canvas.width / 4 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85+250+40);
 
 
     // draw enemy
     ctx.drawImage(document.getElementById("enemy-"+enemy.name), canvas.width - canvas.width / 4-125, canvas.height / 3-75, 250, 250);
-    ctx.globalAlpha = 0.8;
-    drawCard(canvas.width - canvas.width / 4+125+25, canvas.height / 3-75+35, enemy.moves[turn%enemy.moves.length]+(hard?"+":""),false,
-      targetStatuses.map(x=>x[0]).indexOf("stun") != -1);
+    ctx.globalAlpha = 0.7;
+    drawCard(canvas.width - canvas.width / 4+125+25, canvas.height / 3-75+35, enemy.moves[turn%enemy.moves.length]+(hard?"+":""),motheaTax,
+      targetStatuses.map(x=>x[0]).indexOf("stun") != -1, "target");
     ctx.globalAlpha = 1;
 
     // draw deck and discard size
@@ -1385,26 +1739,87 @@ const update = ()=>{
     ctx.fillText("Player Turn", timeInPhase * canvas.width- ctx.measureText("Player Turn").width, canvas.height/2 - 30);
 
     ctx.font = "30px Arial";
-    ctx.fillText("Push", canvas.width * (13 / 14) - ctx.measureText("Push").width / 2, canvas.height - 140);
-    ctx.drawImage(document.getElementById("p"), canvas.width * (13 / 14) - 30, canvas.height - 130, 60, 60);
+    ctx.fillText("Push", canvas.width * (13 / 14) - ctx.measureText("Push").width / 2, canvas.height - 170);
+    ctx.drawImage(document.getElementById("p"), canvas.width * (13 / 14) - 45, canvas.height - 160, 90, 90);
     ctx.fillText("to end turn", canvas.width * (13 / 14) - ctx.measureText("to end turn").width / 2, canvas.height - 40);
 
     ctx.font = "30px Arial";
     ctx.fillText("Turn "+(turn+1), 8, 38);
+    ctx.font = "15px Arial";
+    ctx.fillText("Q to check status effects", 8, 53);
+
+    if (arrowsHeld.q) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "50px Arial";
+      ctx.fillText("Status effects", canvas.width / 2 - ctx.measureText("Status effects").width / 2, 50);
+
+      // loop through player status effects
+      // draw them below player
+
+      let yOffset = 5;
+      for (let i = 0; i < playerStatuses.length; i++) {
+        let status = playerStatuses[i];
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${nametoemoji[status[0]]}${status[0].split("")[0].toUpperCase()}${status[0].split("").filter((a,i)=>i>0).join("")}`, canvas.width / 5, canvas.height / 3 - 75 + 30 + yOffset);
+        ctx.font = "15px Arial";
+        // split description by newlines
+        let description = statusdescs[status[0]].split("\n");
+        for (let j = 0; j < description.length; j++) {
+          ctx.fillText(description[j].replace("{0}",status[1]).replace("{0s}",status[1] === 1 ? "" : "s"), canvas.width / 5, canvas.height / 3 - 75 + 30 + yOffset + 20 + j * 15);
+        }
+        yOffset += 35 + description.length * 15;
+        ctx.textAlign = "left";
+      }
+      yOffset = 0;
+      for (let i = 0; i < targetStatuses.length; i++) {
+        let status = targetStatuses[i];
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${nametoemoji[status[0]]}${status[0].split("")[0].toUpperCase()}${status[0].split("").filter((a,i)=>i>0).join("")}`, 3 * canvas.width / 4, canvas.height / 3 - 75 + 30 + yOffset);
+        ctx.font = "15px Arial";
+        // split description by newlines
+        let description = statusdescs[status[0]].split("\n");
+        for (let j = 0; j < description.length; j++) {
+          ctx.fillText(description[j].replace("{0}",status[1]).replace("{0s}",status[1] === 1 ? "" : "s"), 3 * canvas.width / 4, canvas.height / 3 - 75 + 30 + yOffset + 20 + j * 15);
+        }
+        yOffset += 35 + description.length * 15;
+        ctx.textAlign = "left";
+      }
+    }
+
+    ctx.globalAlpha = 1;
 
   } else if (gameState === "combatDiscardHand") {
     if (timeInPhase > 0.25) {
       if (hand.length === 0) {
         if (enemy.health <= 0) {
-          gameState = "getCard";
-          targetMapMusicVolume = 1;
-          cardDrops = [];
-          // add 3 random card drops
-          for (let i = 0; i < 3; i++) {
-            if (gambler) cardDrops.push("Gambler's Glove");
-            else cardDrops.push(droppableCards[Math.floor(Math.random() * droppableCards.length)]);
+          if (!motheaTax) {
+            gameState = "getCard";
+            targetStatuses = [];
+            playerStatuses = []; // relevant for accelerate's description lmao
+            targetMapMusicVolume = 1;
+            cardDrops = [];
+            // add 3 random card drops
+            for (let i = 0; i < 3; i++) {
+              if (gambler) cardDrops.push("Gambler's Glove");
+              else cardDrops.push(droppableCards[Math.floor(Math.random() * droppableCards.length)]);
+            }
+            console.log(cardDrops);
+          } else {
+            gameState = "map";
+            targetStatuses = [];
+            playerStatuses = []; // relevant for accelerate's description lmao
+            targetMapMusicVolume = 1;
+            cardDrops = [];
+            map.shift();
           }
-          console.log(cardDrops);
         }
         else if (health <= 0) gameState = "gameOver";
         else gameState = "combatEnemyTurn";
@@ -1420,8 +1835,21 @@ const update = ()=>{
     if (hand.length > 8) {
       ctx.setTransform(0.65,0,0,0.65,canvas.width/8,canvas.height*0.35);
     }
+    // get amt of stun
+    let stun = 0;
+    for (let i = 0; i < playerStatuses.length; i++) {
+      if (playerStatuses[i][0] === "stun") {
+        stun += playerStatuses[i][1];
+      }
+    }
     for (card in hand) {
-      drawCard(canvas.width/2 + (card - hand.length / 2) * 160, canvas.height - 205, hand[card], true, false);
+      // check if stunned or cannot afford
+      usable = true;
+      if (stun > card) usable = false;
+      if (energy < getCard(hand[card]).cost) usable = false;
+      if (!usable) ctx.globalAlpha = 0.5;
+      drawCard(canvas.width/2 + (card - hand.length / 2) * 160, canvas.height - 205, hand[card], true, stun > card, "self");
+      ctx.globalAlpha = 1;
     }
     ctx.setTransform(1,0,0,1,0,0);
     ctx.fillStyle = "#00ff00";
@@ -1430,7 +1858,7 @@ const update = ()=>{
     ctx.fillStyle = "#ff0000";
     let hpString = "HP: "+health+"/"+69;
     ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85);
-    hpString = playerStatuses.map(status => status[0] + ": " + status[1]).join(", ");
+    hpString = playerStatuses.map(status => nametoemoji[status[0]] + "" + status[1]).join(" ");
     ctx.fillStyle = "white";
     ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85+250+40);
     ctx.fillStyle = "orange";
@@ -1438,10 +1866,10 @@ const update = ()=>{
     if (enemy.name === "Busyness Man" && realDeck.indexOf("Grappling Hook") != -1) ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85-20);
     // draw orange circle top right of player
     ctx.beginPath();
-    ctx.arc(canvas.width / 5 + 75, canvas.height / 3 - 95, 15, 0, 2 * Math.PI);
+    ctx.arc(canvas.width / 5 + 75, canvas.height / 3 - 100, 20, 0, 2 * Math.PI);
     ctx.fill();
     ctx.fillStyle = "white";
-    ctx.font = "25px Arial";
+    ctx.font = "40px Arial";
     ctx.fillText(energy, canvas.width / 5 + 75 - ctx.measureText(energy).width/2, canvas.height / 3 - 85);
     hpString = "HP: "+enemy.health+"/"+enemy.maxhp;
     ctx.fillStyle = "#ff0000";
@@ -1452,16 +1880,16 @@ const update = ()=>{
       hpString = 'Gold: '+enemy.gold;
       ctx.fillText(hpString, 3 * canvas.width / 4 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85-20);
     }
-    hpString = targetStatuses.map(status => status[0] + ": " + status[1]).join(", ");
+    hpString = targetStatuses.map(status => nametoemoji[status[0]] + "" + status[1]).join(" ");
     ctx.fillStyle = "white";
     ctx.fillText(hpString, 3 * canvas.width / 4 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85+250+40);
 
 
     // draw enemy
     ctx.drawImage(document.getElementById("enemy-"+enemy.name), canvas.width - canvas.width / 4-125, canvas.height / 3-75, 250, 250);
-    ctx.globalAlpha = 0.8;
-    drawCard(canvas.width - canvas.width / 4+125+25, canvas.height / 3-75+35, enemy.moves[turn%enemy.moves.length]+(hard?"+":""),false,
-      targetStatuses.map(x=>x[0]).indexOf("stun") != -1);
+    ctx.globalAlpha = 0.7;
+    drawCard(canvas.width - canvas.width / 4+125+25, canvas.height / 3-75+35, enemy.moves[turn%enemy.moves.length]+(hard?"+":""),motheaTax,
+      targetStatuses.map(x=>x[0]).indexOf("stun") != -1, "target");
     ctx.globalAlpha = 1;
 
     // draw deck and discard size
@@ -1474,6 +1902,54 @@ const update = ()=>{
 
     ctx.font = "30px Arial";
     ctx.fillText("Turn "+(turn+1), 8, 38);
+    ctx.font = "15px Arial";
+    ctx.fillText("Q to check status effects", 8, 53);
+    
+    if (arrowsHeld.q) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "50px Arial";
+      ctx.fillText("Status effects", canvas.width / 2 - ctx.measureText("Status effects").width / 2, 50);
+
+      // loop through player status effects
+      // draw them below player
+
+      let yOffset = 5;
+      for (let i = 0; i < playerStatuses.length; i++) {
+        let status = playerStatuses[i];
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${nametoemoji[status[0]]}${status[0].split("")[0].toUpperCase()}${status[0].split("").filter((a,i)=>i>0).join("")}`, canvas.width / 5, canvas.height / 3 - 75 + 30 + yOffset);
+        ctx.font = "15px Arial";
+        // split description by newlines
+        let description = statusdescs[status[0]].split("\n");
+        for (let j = 0; j < description.length; j++) {
+          ctx.fillText(description[j].replace("{0}",status[1]).replace("{0s}",status[1] === 1 ? "" : "s"), canvas.width / 5, canvas.height / 3 - 75 + 30 + yOffset + 20 + j * 15);
+        }
+        yOffset += 35 + description.length * 15;
+        ctx.textAlign = "left";
+      }
+      yOffset = 0;
+      for (let i = 0; i < targetStatuses.length; i++) {
+        let status = targetStatuses[i];
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${nametoemoji[status[0]]}${status[0].split("")[0].toUpperCase()}${status[0].split("").filter((a,i)=>i>0).join("")}`, 3 * canvas.width / 4, canvas.height / 3 - 75 + 30 + yOffset);
+        ctx.font = "15px Arial";
+        // split description by newlines
+        let description = statusdescs[status[0]].split("\n");
+        for (let j = 0; j < description.length; j++) {
+          ctx.fillText(description[j].replace("{0}",status[1]).replace("{0s}",status[1] === 1 ? "" : "s"), 3 * canvas.width / 4, canvas.height / 3 - 75 + 30 + yOffset + 20 + j * 15);
+        }
+        yOffset += 35 + description.length * 15;
+        ctx.textAlign = "left";
+      }
+    }
 
   } else if (gameState === "combatEnemyTurn") {
     if (timeInPhase == 0) {
@@ -1486,7 +1962,13 @@ const update = ()=>{
           if (targetStatuses[i][1] <= 0) targetStatuses.splice(i, 1);
           break;
         }
-        
+      }
+      for (let i = 0; i < targetStatuses.length; i++) {
+        if (targetStatuses[i][0] === "bleed") {
+          enemy.health -= targetStatuses[i][1];
+          new Audio("./mus/dmg.wav").play();
+          break;
+        }
       }
       for (let i = 0; i < targetStatuses.length; i++) {
         if (targetStatuses[i][0] === "dynamite") {
@@ -1550,7 +2032,7 @@ const update = ()=>{
     ctx.fillStyle = "#ff0000";
     let hpString = "HP: "+health+"/"+69;
     ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85);
-    hpString = playerStatuses.map(status => status[0] + ": " + status[1]).join(", ");
+    hpString = playerStatuses.map(status => nametoemoji[status[0]] + "" + status[1]).join(" ");
     ctx.fillStyle = "white";
     ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85+250+40);
     ctx.fillStyle = "orange";
@@ -1558,10 +2040,10 @@ const update = ()=>{
     if (enemy.name === "Busyness Man" && realDeck.indexOf("Grappling Hook") != -1) ctx.fillText(hpString, canvas.width / 5 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85-20);
     // draw orange circle top right of player
     ctx.beginPath();
-    ctx.arc(canvas.width / 5 + 75, canvas.height / 3 - 95, 15, 0, 2 * Math.PI);
+    ctx.arc(canvas.width / 5 + 75, canvas.height / 3 - 100, 20, 0, 2 * Math.PI);
     ctx.fill();
     ctx.fillStyle = "white";
-    ctx.font = "25px Arial";
+    ctx.font = "40px Arial";
     ctx.fillText(energy, canvas.width / 5 + 75 - ctx.measureText(energy).width/2, canvas.height / 3 - 85);
     hpString = "HP: "+enemy.health+"/"+enemy.maxhp;
     ctx.fillStyle = "#ff0000";
@@ -1572,16 +2054,16 @@ const update = ()=>{
       hpString = 'Gold: '+enemy.gold;
       ctx.fillText(hpString, 3 * canvas.width / 4 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85-20);
     }
-    hpString = targetStatuses.map(status => status[0] + ": " + status[1]).join(", ");
+    hpString = targetStatuses.map(status => nametoemoji[status[0]] + "" + status[1]).join(" ");
     ctx.fillStyle = "white";
     ctx.fillText(hpString, 3 * canvas.width / 4 - ctx.measureText(hpString).width/2, canvas.height / 3 - 85+250+40);
 
 
     // draw enemy
     ctx.drawImage(document.getElementById("enemy-"+enemy.name), canvas.width - canvas.width / 4-125, canvas.height / 3-75, 250, 250);
-    ctx.globalAlpha = 0.8;
-    if (timeInPhase <= 1.5) drawCard(canvas.width - canvas.width / 4+125+25, canvas.height / 3-75+35, enemy.moves[turn%enemy.moves.length]+(hard?"+":""),false,
-      targetStatuses.map(x=>x[0]).indexOf("stun") != -1);
+    ctx.globalAlpha = 0.7;
+    if (timeInPhase <= 1.5) drawCard(canvas.width - canvas.width / 4+125+25, canvas.height / 3-75+35, enemy.moves[turn%enemy.moves.length]+(hard?"+":""),motheaTax,
+      targetStatuses.map(x=>x[0]).indexOf("stun") != -1, "target");
     ctx.globalAlpha = 1;
 
     // draw deck and discard size
@@ -1598,6 +2080,55 @@ const update = ()=>{
 
     ctx.font = "30px Arial";
     ctx.fillText("Turn "+(turn+1), 8, 38);
+    ctx.font = "15px Arial";
+    ctx.fillText("Q to check status effects", 8, 53);
+    
+    if (arrowsHeld.q) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "50px Arial";
+      ctx.fillText("Status effects", canvas.width / 2 - ctx.measureText("Status effects").width / 2, 50);
+
+      // loop through player status effects
+      // draw them below player
+
+      let yOffset = 5;
+      for (let i = 0; i < playerStatuses.length; i++) {
+        let status = playerStatuses[i];
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${nametoemoji[status[0]]}${status[0].split("")[0].toUpperCase()}${status[0].split("").filter((a,i)=>i>0).join("")}`, canvas.width / 5, canvas.height / 3 - 75 + 30 + yOffset);
+        ctx.font = "15px Arial";
+        // split description by newlines
+        let description = statusdescs[status[0]].split("\n");
+        for (let j = 0; j < description.length; j++) {
+          ctx.fillText(description[j].replace("{0}",status[1]).replace("{0s}",status[1] === 1 ? "" : "s"), canvas.width / 5, canvas.height / 3 - 75 + 30 + yOffset + 20 + j * 15);
+        }
+        yOffset += 35 + description.length * 15;
+        ctx.textAlign = "left";
+      }
+      yOffset = 0;
+      for (let i = 0; i < targetStatuses.length; i++) {
+        let status = targetStatuses[i];
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${nametoemoji[status[0]]}${status[0].split("")[0].toUpperCase()}${status[0].split("").filter((a,i)=>i>0).join("")}`, 3 * canvas.width / 4, canvas.height / 3 - 75 + 30 + yOffset);
+        ctx.font = "15px Arial";
+        // split description by newlines
+        let description = statusdescs[status[0]].split("\n");
+        for (let j = 0; j < description.length; j++) {
+          ctx.fillText(description[j].replace("{0}",status[1]).replace("{0s}",status[1] === 1 ? "" : "s"), 3 * canvas.width / 4, canvas.height / 3 - 75 + 30 + yOffset + 20 + j * 15);
+        }
+        yOffset += 35 + description.length * 15;
+        ctx.textAlign = "left";
+      }
+    }
+
   } else if (gameState === "getCard") {
     ctx.setTransform(1,0,0,1,0,0);
     ctx.fillStyle = "white";
@@ -1606,7 +2137,7 @@ const update = ()=>{
     ctx.font = "50px Arial";
     ctx.fillText("Select a card", canvas.width / 2 - ctx.measureText("Select a card").width/2, canvas.height / 2 - 50);
     for (card in cardDrops) {
-      drawCard(canvas.width / 2 + (card - cardDrops.length / 2) * 200 + 40, canvas.height / 2 + 50, cardDrops[card], true);
+      drawCard(canvas.width / 2 + (card - cardDrops.length / 2) * 200 + 40, canvas.height / 2 + 50, cardDrops[card], true, false, "self");
     }
   } else if (gameState === "rest") {
     ctx.setTransform(1,0,0,1,0,0);
@@ -1629,10 +2160,10 @@ const update = ()=>{
     ctx.font = "30px Arial";
     ctx.fillText("< > to select, space to pick", canvas.width / 2 - ctx.measureText("< > to select, space to pick").width/2, canvas.height / 2 - 145);
     for (card in realDeck) {
-      drawCard(canvas.width/2+(card - selupcard-0.5)*160, canvas.height - 480, realDeck[card], true, false);
+      drawCard(canvas.width/2+(card - selupcard-0.5)*160, canvas.height - 480, realDeck[card], true, false, "self");
     }
     ctx.globalAlpha = 0.8;
-    if (realDeck[selupcard].indexOf("+") == -1) drawCard(canvas.width/2-0.5*160, canvas.height - 280, realDeck[selupcard]+"+", true, false);
+    if (realDeck[selupcard].indexOf("+") == -1) drawCard(canvas.width/2-0.5*160, canvas.height - 280, realDeck[selupcard]+"+", true, false, "self");
     ctx.globalAlpha = 1;
   } else if (gameState === "destroy") {
     ctx.setTransform(1,0,0,1,0,0);
@@ -1644,16 +2175,36 @@ const update = ()=>{
     ctx.font = "30px Arial";
     ctx.fillText("< > to select, space to delete", canvas.width / 2 - ctx.measureText("< > to select, space to delete").width/2, canvas.height / 2 - 45);
     for (card in realDeck) {
-      drawCard(canvas.width/2+(card - selupcard-0.5)*160, canvas.height - 380, realDeck[card], true, false);
+      drawCard(canvas.width/2+(card - selupcard-0.5)*160, canvas.height - 380, realDeck[card], true, false, "self");
     }
   } else if (gameState === "win") {
     ctx.setTransform(1,0,0,1,0,0);
     ctx.fillStyle = "white";
     ctx.font = "160px Arial";
-    ctx.fillText("You win good job", canvas.width / 2 - ctx.measureText("You win good job").width/2, canvas.height / 2 + 50);
+    ctx.fillText("You win good job", canvas.width / 2 - ctx.measureText("You win good job").width/2, canvas.height / 2 - 150);
     ctx.font = "80px Arial";
-    ctx.fillText("Difficulty: "+diffstring, canvas.width / 2 - ctx.measureText("Difficulty: "+diffstring).width/2, canvas.height / 2 + 130);
+    ctx.fillText("Difficulty: "+diffstring, canvas.width / 2 - ctx.measureText("Difficulty: "+diffstring).width/2, canvas.height / 2 - 70);
     ctx.globalAlpha = 1;
+
+    // draw decklist
+    // first get sorted copy
+
+    // then get count of each card
+    let cardCount = {};
+    for (card in realDeck) {
+      if (cardCount[realDeck[card]]) cardCount[realDeck[card]]++;
+      else cardCount[realDeck[card]] = 1;
+    }
+
+    // draw deck list
+    ctx.font = "60px Arial";
+    ctx.fillText("Deck", canvas.width / 2 - ctx.measureText("Deck").width/2, canvas.height / 2);
+    ctx.font = "30px Arial";
+    let i = 0;
+    for (card in cardCount) {
+      ctx.fillText(cardCount[card]+"x "+card, canvas.width / 2 - ctx.measureText(cardCount[card]+"x "+card).width/2, canvas.height / 2 + 30 + i++ * 30);
+    }
+
     save = {};
     localStorage.removeItem("ata-save");
   } else if (gameState === "gameOver") {
@@ -1684,50 +2235,78 @@ document.addEventListener("keydown", (e)=>{
     case "ArrowDown":
       arrowsHeld.down = true;
       break;
+    case "q":
+    case "Q":
+      arrowsHeld.q = true;
+      break;
   }
   if (gameState === "menu") {
-    if (e.key === " ") {
-      gameState = "map";
-      deckScroll = 0;
-      hard = false;
-      gambler = false;
-      diffstring = "Normal";
-      doSave();
-    } else if (e.key.toLowerCase() === "h") {
-      gameState = "map";
-      deckScroll = 0;
-      hard = true;
-      realDeck.pop();
-      realDeck.push("Block");
-      diffstring = "Hard";
-      doSave();
-    } else if (e.key.toLowerCase() === "g") {
-      gameState = "map";
-      deckScroll = 0;
-      hard = false;
-      gambler = true;
-      diffstring = "Gambler";
-      realDeck = ["Gambler's Glove","Gambler's Glove","Gambler's Glove","Gambler's Glove","Gambler's Glove"]
-      doSave();
-    } else if (e.key.toLowerCase() === "m") {
-      gameState = "map";
-      deckScroll = 0;
-      hard = true;
-      gambler = false;
-      diffstring = "True Morber";
-      realDeck = ["Morb","Morb","Morb","Morb","Morb","Block","Block","Block","Block","Block"]
-      doSave();
-    } else if (e.key.toLowerCase() === "s") {
+    if (Object.keys(save).length > 0) {
+        
       // load save game or someshit
-      gameState = "map";
-      deckScroll = 0;
-      hard = save.hard;
-      gambler = save.gambler;
-      diffstring = save.diffstring;
-      realDeck = save.deck;
-      health = save.health;
-      map = save.map;
-
+      if (e.key === " ") {
+        gameState = "map";
+        deckScroll = 0;
+        hard = save.hard;
+        gambler = save.gambler;
+        motheaTax = save.motheaTax;
+        diffstring = save.diffstring;
+        realDeck = save.deck;
+        health = save.health;
+        map = save.map;
+      } else if (e.key === "q") {
+        // delete save
+        localStorage.removeItem("ata-save");
+        save = {};
+      }
+    } else {
+      if (e.key === " ") {
+        // load save if we have one
+        gameState = "map";
+        deckScroll = 0;
+        hard = false;
+        gambler = false;
+        motheaTax = false;
+        diffstring = "Normal";
+        doSave();
+      } else if (e.key.toLowerCase() === "h") {
+        gameState = "map";
+        deckScroll = 0;
+        hard = true;
+        gambler = false;
+        motheaTax = false;
+        realDeck.pop();
+        realDeck.push("Block");
+        diffstring = "Hard";
+        doSave();
+      } else if (e.key.toLowerCase() === "g") {
+        gameState = "map";
+        deckScroll = 0;
+        hard = false;
+        gambler = true;
+        motheaTax = false;
+        diffstring = "Gambler";
+        realDeck = ["Gambler's Glove","Gambler's Glove","Gambler's Glove","Gambler's Glove","Gambler's Glove"]
+        doSave();
+      } else if (e.key.toLowerCase() === "m") {
+        gameState = "map";
+        deckScroll = 0;
+        hard = true;
+        gambler = false;
+        motheaTax = false;
+        diffstring = "True Morber";
+        realDeck = ["Morb","Morb","Morb","Morb","Morb","Block","Block","Block","Block","Uninstall"]
+        doSave();
+      } else if (e.key.toLowerCase() === "t") {
+        gameState = "map";
+        deckScroll = 0;
+        hard = false;
+        gambler = false;
+        motheaTax = true;
+        diffstring = "Tax Agent";
+        realDeck = ["Punch","Punch","Block","Block","Morb","Uninstall","Mothea Tax"]
+        doSave();
+      }
     }
   } else if (gameState === "map") {
     if (e.key === " ") {
@@ -1740,7 +2319,7 @@ document.addEventListener("keydown", (e)=>{
       timeInPhase = 0;
     }
     console.log(e.keyCode);
-    if (e.keyCode >= 49 && e.keyCode <= 58 && timeInPhase > 0.5) {
+    if (e.keyCode >= 49 && e.keyCode <= 59 && timeInPhase > 0.5) {
       let numPressed = e.keyCode - 48;
       // get amt of stun
       let stun = 0;
@@ -1842,6 +2421,10 @@ document.addEventListener("keyup", (e)=>{
       break;
     case "ArrowDown":
       arrowsHeld.down = false;
+      break;
+    case "q":
+    case "Q":
+      arrowsHeld.q = false;
       break;
   }
 });
