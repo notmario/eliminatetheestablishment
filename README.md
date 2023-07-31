@@ -1,0 +1,3 @@
+# eliminatetheestablishment
+
+bad sts clone
